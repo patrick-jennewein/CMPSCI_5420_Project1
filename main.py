@@ -33,43 +33,41 @@ def parse() -> tuple:
     return args.dir, args.rows, args.cols
 
 def traverse_dir(start_dir) -> list:
-    """
-        Traverse a directory and return a list of all files and directories.
+    file_vector = []
+    meta_vector = []
+    stack = [start_dir]
+    image_extensions = {".jpeg", ".jpg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
 
-        This function performs a DFS from 'start_dir' and iterates through the current
-        directory path ('root'), the list of subdirectories ('dirs') and the list
-        of files in the current directory ('files'). As the function
-        iterates, metadata is found, and file path names are created and added to the vector.
-    """
+    # keep iterating through stack until empty
+    while stack:
+        current_path = stack.pop()
 
-    file_vector = []                                # vector to store file paths
-    meta_data_vector = []                                  # vector to store meta_data
+        try:
+            # get metadata to see if file or directory
+            meta_data_temp = os.lstat(current_path)
 
-    # depth-first search through directories
-    for root, dirs, files in os.walk(start_dir):
-        # create file paths by iterating through files + directories at that level
-        for name in files + dirs:
-            full_path = os.path.join(root, name)
-            relative_path = os.path.relpath(full_path, start_dir)
-            print(full_path)
-            print(relative_path)
-            try:
-                # get file metadata
-                meta_data = os.lstat(full_path)
-                meta_data_vector.append(meta_data)
+            # If directory, explore directory for DFS
+            if stat.S_ISDIR(meta_data_temp.st_mode):
+                with os.scandir(current_path) as entries:
+                    for entry in reversed(list(entries)):
+                        stack.append(entry.path)
 
-
-                # check if directory
-                if stat.S_ISDIR(meta_data.st_mode):
-                    file_vector.append(f'Directory: {relative_path}')
-
-                # check if file
-                else:
+            # If it's a file, add it to the file_vector
+            else:
+                # Check if the file extension matches any in our image_extensions set
+                _, file_extension = os.path.splitext(current_path)
+                if file_extension.lower() in image_extensions:
+                    relative_path = os.path.relpath(current_path, start_dir)
                     file_vector.append(relative_path)
-            except OSError as e:
-                print(f"Error accessing {full_path}: {e}")
+                    meta_vector.append(meta_data_temp.st_size)
 
-    return file_vector, meta_data_vector
+
+        except OSError as e:
+            print(f"Error accessing {current_path}: {e}")
+
+    print(file_vector)
+    print(meta_vector)
+    return file_vector
 
 
 def main(args, file_vector, meta_data_vector):
@@ -125,12 +123,12 @@ def main(args, file_vector, meta_data_vector):
 if __name__ == "__main__":
     args = parse()
     starting_directory = args[0]
-    file_vector, meta_data_vector = traverse_dir(starting_directory)
-    for file, meta in zip(file_vector, meta_data_vector):
-        print(f"filename: {file}")
-        print(f"{'\tst_size: ':<40}{meta[6]} bytes")
-        print(f"{'\tst_atime (access time): ':<40}{format_timestamp(meta[7])}")
-        print(f"{'\tst_mtime (modification time): ':<40}{format_timestamp(meta[8])}")
-        print(f"{'\tst_ctime (status change time): ':<40}{format_timestamp(meta[9])}")
-    main(args, file_vector, meta_data_vector)
+    file_vector = traverse_dir(starting_directory)
+    # for file, meta in zip(file_vector, meta_data_vector):
+    #     print(f"filename: {file}")
+    #     print(f"{'\tst_size: ':<40}{meta[6]} bytes")
+    #     print(f"{'\tst_atime (access time): ':<40}{format_timestamp(meta[7])}")
+    #     print(f"{'\tst_mtime (modification time): ':<40}{format_timestamp(meta[8])}")
+    #     print(f"{'\tst_ctime (status change time): ':<40}{format_timestamp(meta[9])}")
+    # main(args, file_vector, meta_data_vector)
 

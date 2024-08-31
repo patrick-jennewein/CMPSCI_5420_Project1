@@ -7,35 +7,57 @@ import os                   # for finding file path
 import stat                 # for file metadata
 import datetime             # for formatting metadata
 
-def format_timestamp(timestamp):
-    """Convert timestamp to a human-readable date and time format."""
+def format_timestamp(timestamp) -> str:
+    """convert timestamp to a human-readable date and time format."""
     return datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
+def print_readable_meta(meta_vector) -> None:
+    """from a vector of metadata, print in human-readable format"""
+    for file_path, metadata in meta_vector.items():
+        print(f"\nFile Path: {file_path}")
+        print(f"\t{'Mode':<20}{metadata['st_mode']}")
+        print(f"\t{'Inode':<20}{metadata['st_ino']}")
+        print(f"\t{'Device':<20}{metadata['st_dev']}")
+        print(f"\t{'Links':<20}{metadata['st_nlink']}")
+        print(f"\t{'User ID':<20}{metadata['st_uid']}")
+        print(f"\t{'Group ID':<20}{metadata['st_gid']}")
+        print(f"\t{'Size':<20}{metadata['st_size']:,} bytes")
+        print(f"\t{'Size':<20}{round(metadata['st_size'] / (1024 * 1024), 3)} MB")
+        print(f"\t{'Access Time':<20}{metadata['st_atime']}")
+        print(f"\t{'Mod Time':<20}{metadata['st_mtime']}")
+        print(f"\t{'Create Time':<20}{metadata['st_ctime']}")
+        print("-" * 40)
+
 def parse() -> tuple:
-    """ Parse command-line arguments."""
+    """ parse command-line arguments or use default arguments if none are given"""
     parser = argparse.ArgumentParser()
 
-    # create arguments
-    parser.add_argument("-rows", type=int, default=720,
+    # create optional arguments
+    parser.add_argument("-rows", type = int, default = 720,
                         help="Maximum number of rows in the display window [default: 720]")
-    parser.add_argument("-cols", type=int, default=1080,
+    parser.add_argument("-cols", type = int, default = 1080,
                         help="Maximum number of columns in the display window [default: 1080]")
-    parser.add_argument("dir", help="Directory to browse")
 
-    # Parse arguments
+    # create necessary argument
+    parser.add_argument("dir", help = "Directory to browse")
+
+    # use the parsed arguments
     args = parser.parse_args()
-
-    # Use the parsed arguments
     print(f"Browsing directory: {args.dir}")
     print(f"Rows: {args.rows}")
     print(f"Columns: {args.cols}")
 
     return args.dir, args.rows, args.cols
 
-def traverse_dir(start_dir) -> list:
-    file_vector = []
-    meta_vector = []
+
+def traverse_dir(start_dir) -> tuple:
+    """traverse a single directory using depth-first search"""
+    # set up traversal
+    rel_file_vector = []
+    meta_vector = {}
     stack = [start_dir]
+
+    # provide possible extensions for images
     image_extensions = {".jpeg", ".jpg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
 
     # keep iterating through stack until empty
@@ -46,28 +68,43 @@ def traverse_dir(start_dir) -> list:
             # get metadata to see if file or directory
             meta_data_temp = os.lstat(current_path)
 
-            # If directory, explore directory for DFS
+            # if directory, explore directory for DFS
             if stat.S_ISDIR(meta_data_temp.st_mode):
                 with os.scandir(current_path) as entries:
                     for entry in reversed(list(entries)):
                         stack.append(entry.path)
 
-            # If it's a file, add it to the file_vector
+            # if it's a file, add data to the file_vector and meta_vector
             else:
-                # Check if the file extension matches any in our image_extensions set
+                # check if the file extension matches any in image_extensions set
                 _, file_extension = os.path.splitext(current_path)
                 if file_extension.lower() in image_extensions:
                     relative_path = os.path.relpath(current_path, start_dir)
-                    file_vector.append(relative_path)
-                    meta_vector.append(meta_data_temp.st_size)
+                    rel_file_vector.append(f"{start_dir}\\{relative_path}")
 
+                    # create a dictionary of os.stat_result values with formatted timestamps
+                    meta_vector[f"{start_dir}\\{relative_path}"] = {
+                        "st_mode": meta_data_temp.st_mode,
+                        "st_ino": meta_data_temp.st_ino,
+                        "st_dev": meta_data_temp.st_dev,
+                        "st_nlink": meta_data_temp.st_nlink,
+                        "st_uid": meta_data_temp.st_uid,
+                        "st_gid": meta_data_temp.st_gid,
+                        "st_size": meta_data_temp.st_size,
+                        "st_atime": format_timestamp(meta_data_temp.st_atime),
+                        "st_mtime": format_timestamp(meta_data_temp.st_mtime),
+                        "st_ctime": format_timestamp(meta_data_temp.st_ctime)
+                    }
 
         except OSError as e:
             print(f"Error accessing {current_path}: {e}")
 
-    print(file_vector)
-    print(meta_vector)
-    return file_vector
+    # output the paths and metadata
+    for path in rel_file_vector:
+        print(path)
+    print_readable_meta(meta_vector)
+
+    return rel_file_vector, meta_vector
 
 
 def main(args, file_vector, meta_data_vector):
@@ -77,7 +114,7 @@ def main(args, file_vector, meta_data_vector):
             return 1
 
         # Read the image
-        image = cv2.imread(file_vector[6])
+        image = cv2.imread(file_vector[0])
 
         # Make sure that the image is read properly
         if image is None:
@@ -86,32 +123,17 @@ def main(args, file_vector, meta_data_vector):
         # Image dimensions
         print(f"Image size is: {image.shape[1]}x{image.shape[0]}")  # width x height
 
-        # Read the same image as a grayscale image
-        img_gray = cv2.imread(sys.argv[1], cv2.IMREAD_GRAYSCALE)
-
         # Display color image
         cv2.imshow("Color Rendering", image)
         cv2.waitKey(0)
 
-        # Display grayscale image
-        cv2.imshow("Grayscale Rendering", img_gray)
-        cv2.waitKey(0)
+        # # Display value at a random pixel
+        # random.seed(time.time())
+        # r = random.randint(0, image.shape[0] - 1)
+        # c = random.randint(0, image.shape[1] - 1)
 
-        # Save a copy of grayscale image to disk
-        gray_pic_file = sys.argv[1].rsplit('.', 1)
-        gray_pic_file = f"{gray_pic_file[0]}_gray.{gray_pic_file[1]}"
-        cv2.imwrite(gray_pic_file, img_gray)
-
-        # Display value at a random pixel
-        random.seed(time.time())
-        r = random.randint(0, image.shape[0] - 1)
-        c = random.randint(0, image.shape[1] - 1)
-
-        pxl_color = image[r, c]
-        print(f"Color pixel at ({r},{c}) = ({int(pxl_color[0])}, {int(pxl_color[1])}, {int(pxl_color[2])})")
-
-        pxl_gray = img_gray[r, c]
-        print(f"Gray scale pixel at ({r},{c}) = {int(pxl_gray)}")
+        # pxl_color = image[r, c]
+        # print(f"Color pixel at ({r},{c}) = ({int(pxl_color[0])}, {int(pxl_color[1])}, {int(pxl_color[2])})")
 
     except Exception as e:
         print(f"Error: {sys.argv[0]}: {str(e)}")
@@ -123,12 +145,6 @@ def main(args, file_vector, meta_data_vector):
 if __name__ == "__main__":
     args = parse()
     starting_directory = args[0]
-    file_vector = traverse_dir(starting_directory)
-    # for file, meta in zip(file_vector, meta_data_vector):
-    #     print(f"filename: {file}")
-    #     print(f"{'\tst_size: ':<40}{meta[6]} bytes")
-    #     print(f"{'\tst_atime (access time): ':<40}{format_timestamp(meta[7])}")
-    #     print(f"{'\tst_mtime (modification time): ':<40}{format_timestamp(meta[8])}")
-    #     print(f"{'\tst_ctime (status change time): ':<40}{format_timestamp(meta[9])}")
-    # main(args, file_vector, meta_data_vector)
+    file_vector, meta_vector = traverse_dir(starting_directory)
+    main(args, file_vector, meta_vector)
 

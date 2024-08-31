@@ -11,22 +11,23 @@ def format_timestamp(timestamp) -> str:
     """convert timestamp to a human-readable date and time format."""
     return datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
-def print_readable_meta(meta_vector) -> None:
-    """from a vector of metadata, print in human-readable format"""
-    for file_path, metadata in meta_vector.items():
-        print(f"\nFile Path: {file_path}")
-        print(f"\t{'Mode':<20}{metadata['st_mode']}")
-        print(f"\t{'Inode':<20}{metadata['st_ino']}")
-        print(f"\t{'Device':<20}{metadata['st_dev']}")
-        print(f"\t{'Links':<20}{metadata['st_nlink']}")
-        print(f"\t{'User ID':<20}{metadata['st_uid']}")
-        print(f"\t{'Group ID':<20}{metadata['st_gid']}")
-        print(f"\t{'Size':<20}{metadata['st_size']:,} bytes")
-        print(f"\t{'Size':<20}{round(metadata['st_size'] / (1024 * 1024), 3)} MB")
-        print(f"\t{'Access Time':<20}{metadata['st_atime']}")
-        print(f"\t{'Mod Time':<20}{metadata['st_mtime']}")
-        print(f"\t{'Create Time':<20}{metadata['st_ctime']}")
-        print("-" * 40)
+def print_readable_meta(file_path: str, metadata: dict) -> None:
+    """print metadata for a single file in a human-readable format."""
+    print(f"\nFile Path: {file_path}")
+    print(f"\t{'Mode':<20}{metadata[file_path]['st_mode']}")
+    print(f"\t{'Inode':<20}{metadata[file_path]['st_ino']}")
+    print(f"\t{'Device':<20}{metadata[file_path]['st_dev']}")
+    print(f"\t{'Links':<20}{metadata[file_path]['st_nlink']}")
+    print(f"\t{'User ID':<20}{metadata[file_path]['st_uid']}")
+    print(f"\t{'Group ID':<20}{metadata[file_path]['st_gid']}")
+    print(f"\t{'Size':<20}{metadata[file_path]['st_size']:,} bytes")
+    print(f"\t{'Size':<20}{round(metadata[file_path]['st_size'] / (1024 * 1024), 3)} MB")
+    print(f"\t{'Access Time':<20}{metadata[file_path]['st_atime']}")
+    print(f"\t{'Mod Time':<20}{metadata[file_path]['st_mtime']}")
+    print(f"\t{'Create Time':<20}{metadata[file_path]['st_ctime']}")
+    print(f"\t{'Width':<20}{metadata[file_path]['width']}")
+    print(f"\t{'Height':<20}{metadata[file_path]['height']}")
+    print("-" * 40)
 
 def parse() -> tuple:
     """ parse command-line arguments or use default arguments if none are given"""
@@ -83,6 +84,7 @@ def traverse_dir(start_dir) -> tuple:
                     rel_file_vector.append(f"{start_dir}\\{relative_path}")
 
                     # create a dictionary of os.stat_result values with formatted timestamps
+                    image = cv2.imread(f"{start_dir}\\{relative_path}")
                     meta_vector[f"{start_dir}\\{relative_path}"] = {
                         "st_mode": meta_data_temp.st_mode,
                         "st_ino": meta_data_temp.st_ino,
@@ -93,16 +95,13 @@ def traverse_dir(start_dir) -> tuple:
                         "st_size": meta_data_temp.st_size,
                         "st_atime": format_timestamp(meta_data_temp.st_atime),
                         "st_mtime": format_timestamp(meta_data_temp.st_mtime),
-                        "st_ctime": format_timestamp(meta_data_temp.st_ctime)
+                        "st_ctime": format_timestamp(meta_data_temp.st_ctime),
+                        "width": image.shape[1],
+                        "height": image.shape[0]
                     }
 
         except OSError as e:
             print(f"Error accessing {current_path}: {e}")
-
-    # output the paths and metadata
-    for path in rel_file_vector:
-        print(path)
-    print_readable_meta(meta_vector)
 
     return rel_file_vector, meta_vector
 
@@ -113,27 +112,17 @@ def main(args, file_vector, meta_data_vector):
             print(f"usage: {sys.argv[0]} image_file")
             return 1
 
-        # Read the image
+        # Read the image and print metadata
         image = cv2.imread(file_vector[0])
+        print_readable_meta(file_vector[0], meta_data_vector)
 
         # Make sure that the image is read properly
         if image is None:
             raise Exception(f"Cannot open input image {sys.argv[1]}")
 
-        # Image dimensions
-        print(f"Image size is: {image.shape[1]}x{image.shape[0]}")  # width x height
-
         # Display color image
         cv2.imshow("Color Rendering", image)
         cv2.waitKey(0)
-
-        # # Display value at a random pixel
-        # random.seed(time.time())
-        # r = random.randint(0, image.shape[0] - 1)
-        # c = random.randint(0, image.shape[1] - 1)
-
-        # pxl_color = image[r, c]
-        # print(f"Color pixel at ({r},{c}) = ({int(pxl_color[0])}, {int(pxl_color[1])}, {int(pxl_color[2])})")
 
     except Exception as e:
         print(f"Error: {sys.argv[0]}: {str(e)}")

@@ -7,27 +7,31 @@ import os                   # for finding file path
 import stat                 # for file metadata
 import datetime             # for formatting metadata
 
-def format_timestamp(timestamp) -> str:
-    """convert timestamp to a human-readable date and time format."""
+def format_timestamp(timestamp: float) -> str:
+    """convert numeric timestamp to a human-readable date and time format."""
     return datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
-def print_readable_meta(file_path: str, metadata: dict) -> None:
-    """print metadata for a single file in a human-readable format."""
-    print(f"\nFile Path: {file_path}")
-    print(f"\t{'Mode':<20}{metadata[file_path]['st_mode']}")
-    print(f"\t{'Inode':<20}{metadata[file_path]['st_ino']}")
-    print(f"\t{'Device':<20}{metadata[file_path]['st_dev']}")
-    print(f"\t{'Links':<20}{metadata[file_path]['st_nlink']}")
-    print(f"\t{'User ID':<20}{metadata[file_path]['st_uid']}")
-    print(f"\t{'Group ID':<20}{metadata[file_path]['st_gid']}")
-    print(f"\t{'Size':<20}{metadata[file_path]['st_size']:,} bytes")
-    print(f"\t{'Size':<20}{round(metadata[file_path]['st_size'] / (1024 * 1024), 3)} MB")
-    print(f"\t{'Access Time':<20}{metadata[file_path]['st_atime']}")
-    print(f"\t{'Mod Time':<20}{metadata[file_path]['st_mtime']}")
-    print(f"\t{'Create Time':<20}{metadata[file_path]['st_ctime']}")
-    print(f"\t{'Width':<20}{metadata[file_path]['width']}")
-    print(f"\t{'Height':<20}{metadata[file_path]['height']}")
+
+def print_readable_meta(meta_data_temp: os.lstat, image: cv2.imread, image_path: str) -> None:
+    """print human-readable metadata from image"""
+    print(f"\t{'File Path':<20}{image_path}")
+    print(f"\t{'File Type':<20}{image_path.split('.')[-1]}")
+    print(f"\t{'Mode':<20}{meta_data_temp.st_mode}")
+    print(f"\t{'Inode':<20}{meta_data_temp.st_ino}")
+    print(f"\t{'Device':<20}{meta_data_temp.st_dev}")
+    print(f"\t{'Links':<20}{meta_data_temp.st_nlink}")
+    print(f"\t{'User ID':<20}{meta_data_temp.st_uid}")
+    print(f"\t{'Group ID':<20}{meta_data_temp.st_gid}")
+    print(f"\t{'Size':<20}{meta_data_temp.st_size:,} bytes")
+    print(f"\t{'Size':<20}{round(meta_data_temp.st_size / (1024 * 1024), 3)} MB")
+    print(f"\t{'Access Time':<20}{meta_data_temp.st_atime}")
+    print(f"\t{'Mod Time':<20}{meta_data_temp.st_mtime}")
+    print(f"\t{'Create Time':<20}{meta_data_temp.st_ctime}")
+    print(f"\t{'Width':<20}{image.shape[1]}")
+    print(f"\t{'Height':<20}{image.shape[0]}")
+    print(f"\t{'Extension':<20}{image.shape[0]}")
     print("-" * 40)
+
 
 def parse() -> tuple:
     """ parse command-line arguments or use default arguments if none are given"""
@@ -53,9 +57,7 @@ def parse() -> tuple:
 
 def traverse_dir(start_dir) -> tuple:
     """traverse a single directory using depth-first search"""
-    # set up traversal
     rel_file_vector = []
-    meta_vector = {}
     stack = [start_dir]
 
     # provide possible extensions for images
@@ -69,58 +71,42 @@ def traverse_dir(start_dir) -> tuple:
             # get metadata to see if file or directory
             meta_data_temp = os.lstat(current_path)
 
-            # if directory, explore directory for DFS
+            # if directory, 'explore' directory for DFS
             if stat.S_ISDIR(meta_data_temp.st_mode):
                 with os.scandir(current_path) as entries:
                     for entry in reversed(list(entries)):
                         stack.append(entry.path)
 
-            # if it's a file, add data to the file_vector and meta_vector
+            # if it's a file that matches image extensions, add data to the file_vector
             else:
-                # check if the file extension matches any in image_extensions set
                 _, file_extension = os.path.splitext(current_path)
                 if file_extension.lower() in image_extensions:
                     relative_path = os.path.relpath(current_path, start_dir)
                     rel_file_vector.append(f"{start_dir}\\{relative_path}")
 
-                    # create a dictionary of os.stat_result values with formatted timestamps
-                    image = cv2.imread(f"{start_dir}\\{relative_path}")
-                    meta_vector[f"{start_dir}\\{relative_path}"] = {
-                        "st_mode": meta_data_temp.st_mode,
-                        "st_ino": meta_data_temp.st_ino,
-                        "st_dev": meta_data_temp.st_dev,
-                        "st_nlink": meta_data_temp.st_nlink,
-                        "st_uid": meta_data_temp.st_uid,
-                        "st_gid": meta_data_temp.st_gid,
-                        "st_size": meta_data_temp.st_size,
-                        "st_atime": format_timestamp(meta_data_temp.st_atime),
-                        "st_mtime": format_timestamp(meta_data_temp.st_mtime),
-                        "st_ctime": format_timestamp(meta_data_temp.st_ctime),
-                        "width": image.shape[1],
-                        "height": image.shape[0]
-                    }
-
         except OSError as e:
             print(f"Error accessing {current_path}: {e}")
 
-    return rel_file_vector, meta_vector
+    return rel_file_vector
 
 
-def main(args, file_vector, meta_data_vector):
+def main(args, file_vector):
     try:
         if len(sys.argv) != 2:
             print(f"usage: {sys.argv[0]} image_file")
             return 1
 
-        # Read the image and print metadata
-        image = cv2.imread(file_vector[0])
-        print_readable_meta(file_vector[0], meta_data_vector)
-
-        # Make sure that the image is read properly
+        # Read the image
+        image_path = file_vector[0]
+        image = cv2.imread(image_path)
         if image is None:
             raise Exception(f"Cannot open input image {sys.argv[1]}")
 
-        # Display color image
+        # print metadata
+        meta_data_temp = os.lstat(image_path)
+        print_readable_meta(meta_data_temp, image, image_path)
+
+        # display
         cv2.imshow("Color Rendering", image)
         cv2.waitKey(0)
 
@@ -134,6 +120,6 @@ def main(args, file_vector, meta_data_vector):
 if __name__ == "__main__":
     args = parse()
     starting_directory = args[0]
-    file_vector, meta_vector = traverse_dir(starting_directory)
-    main(args, file_vector, meta_vector)
+    file_vector = traverse_dir(starting_directory)
+    main(args, file_vector)
 

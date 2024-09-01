@@ -7,7 +7,6 @@ in its subdirectories.
 
 - [Installation](#installation)
 - [Usage](#usage)
-- [Contributing](#contributing)
 
 ## Installation
 
@@ -17,6 +16,8 @@ Pre-requisites
 
 Required libraries: 
 * opencv-python~=4.10.0.84
+
+Necessary standard libraries include `os`, `argparse`, and `stat` 
 
 ### Installing
 
@@ -34,14 +35,4 @@ The program can be run with `python main.py [-h] [-rows=numrows] [-cols=numcols]
 * `python main.py -rows=1000 dirA` will do the same, but with a size of 1000 pixels height, if possible
 * `python main.py -cols=1000 dirA` will do the same, but with a size of 1000 pixels width, if possible
 * `python main.py -rows=1000 -cols=1000 dirA` will do the same, but with a size of 1000 pixels width and/or 1000 pixels height, if possible
-* `python main.py -h` will show the help dialogue 
-
-## Contributing
-Contributions are welcome! Here's how you can contribute:
-
-* Fork the repository.
-* Create your feature branch: git checkout -b feature-name
-* Commit your changes: git commit -m 'Add feature'
-* Push to the branch: git push origin feature-name
-* Open a pull request.
-
+* `python main.py -h` will show the help dialogue

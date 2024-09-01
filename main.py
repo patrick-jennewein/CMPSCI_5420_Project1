@@ -1,9 +1,11 @@
 import cv2
 import os
-from print import print_readable_meta, display_commands
+from print import print_readable_meta
+from instructions import display_commands
 from resizing import resize_image
 from dfs import traverse_dir
-from terminal import parse, handle_user_input
+from parse_args import parse
+from user_input import handle_user_input
 
 def main(dir_path, max_rows, max_cols, file_vector):
     try:

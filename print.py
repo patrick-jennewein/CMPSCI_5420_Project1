@@ -32,10 +32,3 @@ def print_readable_meta(meta_data_temp: os.stat_result, image, image_path: str) 
     print(f"\t{'Pixels':<40}{(image.shape[0] * image.shape[1]):,}")
     print(f"\t{'Extension':<40}{image_path.split('.')[-1]}")
     print("-" * 80)
-
-def display_commands():
-    """display commands for a simple GUI"""
-    print("Commands:")
-    print(f"\t{'Display next image':<40}{'n, spacebar'}")
-    print(f"\t{'Display previous image':<40}{'p'}")
-    print(f"\t{'Quit':<40}{'q'}")

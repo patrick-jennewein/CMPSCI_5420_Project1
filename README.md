@@ -16,6 +16,7 @@ Pre-requisites
 
 Required libraries: 
 * opencv-python~=4.10.0.84
+* numpy~=1.25.2
 
 Necessary standard libraries include `os`, `argparse`, and `stat` 
 

@@ -1,3 +1,6 @@
+# CMP SCI 5420, Professor Bhatia
+# Patrick Jennewein, September 4, 2024
+
 import cv2
 import os
 from print import print_readable_meta

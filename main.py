@@ -4,7 +4,6 @@
 import cv2
 import os
 from print import print_readable_meta
-from instructions import display_commands
 from resizing import resize_image
 from dfs import traverse_dir
 from parse_args import parse
@@ -31,11 +30,9 @@ def main(dir_path, max_rows, max_cols, file_vector):
 
             # print metadata
             meta_data_temp = os.lstat(image_path)
-            print_readable_meta(meta_data_temp, resized_image, image_path)
-
+            print_readable_meta(meta_data_temp, resized_image, image_path, current_index)
             # display
             cv2.imshow("color rendering", resized_image)
-            display_commands()
 
             # wait for user input
             key = cv2.waitKey(0) & 0xFF

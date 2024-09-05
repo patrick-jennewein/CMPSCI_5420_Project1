@@ -15,7 +15,5 @@ def parse() -> tuple:
     # use the parsed arguments
     args = parser.parse_args()
     print(f"Browsing directory: {args.dir}")
-    print(f"Rows: {args.rows}")
-    print(f"Columns: {args.cols}")
 
     return args.dir, args.rows, args.cols
